@@ -1,0 +1,34 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "labels": ["renovate"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Bump Agnes customer-instance module ref (git tags infra-vX.Y.Z)",
+      "fileMatch": ["^terraform/main\\.tf$"],
+      "matchStrings": [
+        "source\\s*=\\s*\"github\\.com/keboola/agnes-the-ai-analyst//infra/modules/customer-instance\\?ref=(?<currentValue>infra-v\\d+\\.\\d+\\.\\d+)\""
+      ],
+      "depNameTemplate": "keboola/agnes-the-ai-analyst",
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "regex:^infra-v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchDepNames": ["keboola/agnes-the-ai-analyst"],
+      "matchUpdateTypes": ["major"],
+      "prPriority": 10,
+      "labels": ["renovate", "breaking"]
+    },
+    {
+      "matchDepNames": ["keboola/agnes-the-ai-analyst"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": false
+    }
+  ],
+  "schedule": ["after 6am and before 10am on weekdays"]
+}
