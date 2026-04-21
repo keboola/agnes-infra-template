@@ -22,13 +22,17 @@
       "matchDepNames": ["keboola/agnes-the-ai-analyst"],
       "matchUpdateTypes": ["major"],
       "prPriority": 10,
-      "labels": ["renovate", "breaking"]
+      "labels": ["renovate", "breaking"],
+      "automerge": false
     },
     {
       "matchDepNames": ["keboola/agnes-the-ai-analyst"],
       "matchUpdateTypes": ["minor", "patch"],
-      "automerge": false
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true,
+      "ignoreTests": false
     }
   ],
-  "schedule": ["after 6am and before 10am on weekdays"]
+  "schedule": ["at any time"]
 }
