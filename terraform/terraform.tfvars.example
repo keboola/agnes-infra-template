@@ -1,0 +1,27 @@
+# Kopíruj do terraform.tfvars a vyplň.
+# terraform.tfvars je gitignored — nikdy necommituj!
+
+gcp_project_id    = "REPLACE"             # Váš GCP projekt
+customer_name     = "REPLACE"             # Krátký identifikátor, např. "acme"
+seed_admin_email  = "admin@example.com"
+data_source       = "keboola"             # keboola | bigquery | csv
+keboola_stack_url = "https://connection.keboola.com/"
+
+prod_instance = {
+  name         = "agnes-prod"
+  machine_type = "e2-small"
+  data_disk_gb = 50
+  image_tag    = "stable"                 # floating; or pin to stable-2026.04.X
+  upgrade_mode = "auto"                   # auto (cron every 5min) | pinned (manual)
+  tls_mode     = "none"                   # none | caddy | gcp-lb | cloudflare
+  domain       = ""                       # only if tls_mode=caddy
+}
+
+dev_instances = [
+  {
+    name      = "agnes-dev"
+    image_tag = "dev"                     # floating — always latest feature branch build
+  },
+  # Add more dev VMs as needed (branch-aware):
+  # { name = "agnes-alice-test", image_tag = "dev-feature-alice-xyz" },
+]

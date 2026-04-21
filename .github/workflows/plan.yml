@@ -1,0 +1,57 @@
+name: Terraform Plan
+
+on:
+  pull_request:
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/plan.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ~1.7
+
+      - run: terraform init
+
+      - name: Terraform fmt check
+        run: terraform fmt -check
+        continue-on-error: true
+
+      - name: Terraform plan
+        id: plan
+        run: |
+          terraform plan -no-color 2>&1 | tee plan.txt
+          echo "exit=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      - name: Comment plan on PR
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        working-directory: ${{ github.workspace }}
+        run: |
+          PLAN=$(head -c 60000 terraform/plan.txt)
+          {
+            echo "### Terraform plan"
+            echo ""
+            echo '```'
+            printf '%s\n' "$PLAN"
+            echo '```'
+          } > /tmp/comment.md
+          gh pr comment "$PR_NUMBER" --body-file /tmp/comment.md
