@@ -1,0 +1,44 @@
+name: Terraform Validate
+
+# Gate for Renovate auto-merge: verifies that any bumped module ref
+# still passes `terraform init + validate` against the module API.
+# No GCP credentials needed — this does not touch real infrastructure.
+
+on:
+  pull_request:
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/validate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ~1.7
+
+      - name: terraform fmt
+        run: terraform fmt -check
+        continue-on-error: true
+
+      - name: terraform init (no backend)
+        run: terraform init -backend=false
+
+      - name: terraform validate
+        run: terraform validate
