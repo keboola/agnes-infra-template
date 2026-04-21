@@ -91,6 +91,47 @@ curl -X POST http://$PROD_IP:8000/auth/bootstrap \
 
 Then open `http://<prod_ip>:8000/login` and sign in.
 
+## Finding your instance URLs and IPs
+
+Terraform is the source of truth. Do **not** hardcode IPs anywhere — they persist across VM replacement (static addresses), but documenting them manually goes stale when anyone recreates the infra.
+
+```bash
+cd terraform
+export GOOGLE_APPLICATION_CREDENTIALS=path/to/agnes-deploy-key.json
+
+# Single prod IP
+terraform output -raw prod_ip
+# 34.77.102.61
+
+# Map of all instances (prod + every dev_instances entry)
+terraform output -json instance_ips | jq
+# {
+#   "agnes-prod": "34.77.102.61",
+#   "agnes-dev":  "34.77.94.14"
+# }
+
+# JWT secret reference (for app restarts after rotation)
+terraform output -raw jwt_secret_name
+
+# Daily backup policy (for 'gcloud compute snapshots list' filtering)
+terraform output -raw backup_policy_id
+```
+
+Alternative (without Terraform, direct from GCP):
+
+```bash
+gcloud compute addresses list \
+    --project=<YOUR_GCP_PROJECT_ID> \
+    --filter="name~agnes-" \
+    --format="table(name, address, status, users)"
+```
+
+Or via GCP Console: https://console.cloud.google.com/networking/addresses/list?project=&lt;YOUR_GCP_PROJECT_ID&gt;
+
+**When a VM is recreated** (e.g. `terraform apply -replace=module.agnes.google_compute_instance.vm["agnes-prod"]`), the static IP is preserved — the same address is reattached to the new VM. URLs do not change.
+
+If you have a custom domain, point a DNS A-record at the static IP once; all future VM replacements keep the same address.
+
 ## Upgrade flows
 
 ### App image (code changes in upstream Agnes)
