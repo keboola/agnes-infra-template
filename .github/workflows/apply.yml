@@ -6,7 +6,16 @@ on:
     paths:
       - 'terraform/**'
       - '.github/workflows/apply.yml'
-  workflow_dispatch: {}
+  # Manual trigger — supports an optional list of resource addresses to
+  # destroy + recreate on this run. Use when a module upgrade changed the
+  # VM startup script (which is ignored by lifecycle on normal applies) and
+  # you want it propagated to running VMs.
+  workflow_dispatch:
+    inputs:
+      recreate_targets:
+        description: 'Comma-separated TF resource addresses to -replace (e.g. module.agnes.google_compute_instance.vm["agnes-prod"]). Leave empty for a normal apply.'
+        required: false
+        default: ''
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -23,14 +32,37 @@ jobs:
         working-directory: terraform
     steps:
       - uses: actions/checkout@v5
+
       - uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ~1.7
+
       - run: terraform init
-      - run: terraform apply -auto-approve
+
+      - name: Build -replace flags (dev only)
+        id: replace
+        env:
+          TARGETS: ${{ github.event.inputs.recreate_targets }}
+        run: |
+          FLAGS=""
+          if [ -n "$TARGETS" ]; then
+            IFS=',' read -ra ADDRS <<< "$TARGETS"
+            for addr in "${ADDRS[@]}"; do
+              trimmed=$(echo "$addr" | xargs)
+              case "$trimmed" in
+                *agnes-dev*) FLAGS+=" -replace=$trimmed" ;;
+              esac
+            done
+          fi
+          echo "flags=$FLAGS" >> $GITHUB_OUTPUT
+          [ -n "$FLAGS" ] && echo "Replacing dev: $FLAGS" || echo "Normal apply-dev"
+
+      - name: Apply dev instances
+        run: terraform apply -auto-approve ${{ steps.replace.outputs.flags }}
 
   apply-prod:
     needs: apply-dev
@@ -41,14 +73,37 @@ jobs:
         working-directory: terraform
     steps:
       - uses: actions/checkout@v5
+
       - uses: google-github-actions/auth@v3
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
+
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ~1.7
+
       - run: terraform init
-      - run: terraform apply -auto-approve
+
+      - name: Build -replace flags (prod only)
+        id: replace
+        env:
+          TARGETS: ${{ github.event.inputs.recreate_targets }}
+        run: |
+          FLAGS=""
+          if [ -n "$TARGETS" ]; then
+            IFS=',' read -ra ADDRS <<< "$TARGETS"
+            for addr in "${ADDRS[@]}"; do
+              trimmed=$(echo "$addr" | xargs)
+              case "$trimmed" in
+                *agnes-dev*) ;;  # handled in apply-dev
+                *)           FLAGS+=" -replace=$trimmed" ;;
+              esac
+            done
+          fi
+          echo "flags=$FLAGS" >> $GITHUB_OUTPUT
+          [ -n "$FLAGS" ] && echo "Replacing prod: $FLAGS" || echo "Normal apply-prod"
+
+      - run: terraform apply -auto-approve ${{ steps.replace.outputs.flags }}
 
       - name: Smoke test prod
         run: |
