@@ -1,27 +1,45 @@
-# Kopíruj do terraform.tfvars a vyplň.
-# terraform.tfvars je gitignored — nikdy necommituj!
+# Copy this file to terraform.tfvars and fill in the values below.
+# terraform.tfvars is gitignored — never commit it.
 
-gcp_project_id    = "REPLACE"             # Váš GCP projekt
-customer_name     = "REPLACE"             # Krátký identifikátor, např. "acme"
-seed_admin_email  = "admin@example.com"
+gcp_project_id    = "REPLACE"             # Your GCP project ID
+customer_name     = "REPLACE"             # Short identifier (e.g. "acme"), used as a resource prefix
+seed_admin_email  = "admin@example.com"   # First admin; bootstrap endpoint activates this account
 data_source       = "keboola"             # keboola | bigquery | csv
 keboola_stack_url = "https://connection.keboola.com/"
+
+# runtime_secrets (optional) — Secret Manager secrets the VM may read.
+# Default is ["keboola-storage-token"]. Set to [] if data_source != "keboola".
+# runtime_secrets = []
+
+# firewall_ssh_source_ranges (optional) — CIDR ranges allowed on port 22.
+# Default is GCP IAP tunnel range (use `gcloud compute ssh --tunnel-through-iap`).
+# Override to ["0.0.0.0/0"] for unrestricted SSH (not recommended).
+# firewall_ssh_source_ranges = ["203.0.113.0/24"]  # e.g. office CIDR
+
+# notification_channel_ids (optional) — GCP Monitoring channels for alerts.
+# Empty = alerts fire silently. Create channels first via
+# `gcloud alpha monitoring channels create ...` and paste full resource IDs.
+# notification_channel_ids = ["projects/<project>/notificationChannels/<id>"]
+
+# compose_ref (optional) — git ref for fetching docker-compose files on VM boot.
+# Default "main" (latest). Pin to a tag like "stable-2026.04.47" for reproducibility.
+# compose_ref = "main"
 
 prod_instance = {
   name         = "agnes-prod"
   machine_type = "e2-small"
   data_disk_gb = 50
-  image_tag    = "stable"                 # floating; or pin to stable-2026.04.X
-  upgrade_mode = "auto"                   # auto (cron every 5min) | pinned (manual)
-  tls_mode     = "none"                   # none | caddy | gcp-lb | cloudflare
-  domain       = ""                       # only if tls_mode=caddy
+  image_tag    = "stable"                 # floating; or pin to "stable-2026.04.X"
+  upgrade_mode = "auto"                   # auto (cron every 5 min) | pinned (manual)
+  tls_mode     = "none"                   # none | caddy (requires domain)
+  domain       = ""                       # required when tls_mode = "caddy"
 }
 
 dev_instances = [
   {
     name      = "agnes-dev"
-    image_tag = "dev"                     # floating — always latest feature branch build
+    image_tag = "dev"                     # floating — latest feature-branch build
   },
-  # Add more dev VMs as needed (branch-aware):
+  # Add more dev VMs as needed (one per branch or team member):
   # { name = "agnes-alice-test", image_tag = "dev-feature-alice-xyz" },
 ]
