@@ -43,26 +43,24 @@ jobs:
 
       - run: terraform init
 
-      - name: Build -replace flags (dev only)
-        id: replace
+      - name: Apply (dev targets)
         env:
           TARGETS: ${{ github.event.inputs.recreate_targets }}
         run: |
-          FLAGS=""
+          declare -a TF_ARGS=("-auto-approve")
           if [ -n "$TARGETS" ]; then
             IFS=',' read -ra ADDRS <<< "$TARGETS"
             for addr in "${ADDRS[@]}"; do
-              trimmed=$(echo "$addr" | xargs)
-              case "$trimmed" in
-                *agnes-dev*) FLAGS+=" -replace=$trimmed" ;;
-              esac
+              # trim whitespace without losing quotes
+              addr="${addr#"${addr%%[![:space:]]*}"}"
+              addr="${addr%"${addr##*[![:space:]]}"}"
+              if [[ "$addr" == *agnes-dev* ]]; then
+                TF_ARGS+=("-replace=$addr")
+                echo "Will -replace: $addr"
+              fi
             done
           fi
-          echo "flags=$FLAGS" >> $GITHUB_OUTPUT
-          [ -n "$FLAGS" ] && echo "Replacing dev: $FLAGS" || echo "Normal apply-dev"
-
-      - name: Apply dev instances
-        run: terraform apply -auto-approve ${{ steps.replace.outputs.flags }}
+          terraform apply "${TF_ARGS[@]}"
 
   apply-prod:
     needs: apply-dev
@@ -84,26 +82,25 @@ jobs:
 
       - run: terraform init
 
-      - name: Build -replace flags (prod only)
-        id: replace
+      - name: Apply (prod targets)
         env:
           TARGETS: ${{ github.event.inputs.recreate_targets }}
         run: |
-          FLAGS=""
+          declare -a TF_ARGS=("-auto-approve")
           if [ -n "$TARGETS" ]; then
             IFS=',' read -ra ADDRS <<< "$TARGETS"
             for addr in "${ADDRS[@]}"; do
-              trimmed=$(echo "$addr" | xargs)
-              case "$trimmed" in
-                *agnes-dev*) ;;  # handled in apply-dev
-                *)           FLAGS+=" -replace=$trimmed" ;;
-              esac
+              addr="${addr#"${addr%%[![:space:]]*}"}"
+              addr="${addr%"${addr##*[![:space:]]}"}"
+              # dev targets are handled by apply-dev; skip here
+              if [[ "$addr" == *agnes-dev* ]]; then continue; fi
+              if [ -n "$addr" ]; then
+                TF_ARGS+=("-replace=$addr")
+                echo "Will -replace: $addr"
+              fi
             done
           fi
-          echo "flags=$FLAGS" >> $GITHUB_OUTPUT
-          [ -n "$FLAGS" ] && echo "Replacing prod: $FLAGS" || echo "Normal apply-prod"
-
-      - run: terraform apply -auto-approve ${{ steps.replace.outputs.flags }}
+          terraform apply "${TF_ARGS[@]}"
 
       - name: Smoke test prod
         run: |
