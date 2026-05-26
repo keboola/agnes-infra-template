@@ -21,9 +21,12 @@ keboola_stack_url = "https://connection.keboola.com/"
 # `gcloud alpha monitoring channels create ...` and paste full resource IDs.
 # notification_channel_ids = ["projects/<project>/notificationChannels/<id>"]
 
-# compose_ref (optional) — git ref for fetching docker-compose files on VM boot.
-# Default "main" (latest). Pin to a tag like "stable-2026.04.47" for reproducibility.
-# compose_ref = "main"
+# compose_ref — DEPRECATED in infra-v1.9.0. Compose files now ship inside the
+# Docker image at /opt/agnes-host/ and are extracted via `docker cp` from
+# whatever `image_tag` you pin below. Pin `image_tag` to a `stable-YYYY.MM.N`
+# tag for reproducibility instead. The variable is retained for one release
+# cycle to avoid breaking existing terraform plans; it will be removed in
+# a future major bump. Do not set.
 
 prod_instance = {
   name         = "agnes-prod"
