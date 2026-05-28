@@ -1,0 +1,48 @@
+{
+  "model": "sonnet",
+  "permissions": {
+    "allow": ["Read", "Bash", "Grep", "Glob"]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c \"agnes capture-session 2>/dev/null || true\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c \"agnes self-upgrade --quiet 2>/dev/null || true; agnes pull --quiet 2>/dev/null || true\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c \"agnes refresh-marketplace --check 2>/dev/null || true\""
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c \"( nohup agnes push --quiet </dev/null >/dev/null 2>&1 & ) ; true\""
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "agnes statusline"
+  }
+}

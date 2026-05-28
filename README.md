@@ -165,18 +165,69 @@ dev_instances = [
 
 PR → plan → merge → new dev VM spawned. No GitHub env / SA changes needed.
 
+## Content directories
+
+In addition to Terraform-managed infrastructure, this template ships **content** that an Agnes server pulls from your fork: the initial analyst workspace, your curated marketplace, and the install-prompt template. Each lives in its own sub-tree and is registered with the Agnes server via a different admin endpoint. The three contracts are independent — the workspace parser only reads `workspace/`, the marketplace parser only reads `.claude-plugin/` + `plugins/`, and the install-prompt loader only reads `install-prompt/`.
+
+| Path it owns | Registered in Agnes via | OSS contract |
+|---|---|---|
+| `workspace/` | `/admin/server-config` → Initial Workspace Template, URL = this repo | [`docs/initial-workspace-override.md`](https://github.com/keboola/agnes-the-ai-analyst/blob/main/docs/initial-workspace-override.md) |
+| `.claude-plugin/marketplace.json` + `plugins/*` | `/admin/marketplaces`, URL = this repo | [`docs/marketplace.md`](https://github.com/keboola/agnes-the-ai-analyst/blob/main/docs/marketplace.md) |
+| `install-prompt/template.md.tmpl` | `/admin/server-config` → Install-prompt template, URL = this repo | [`docs/seed-repo-contract.md`](https://github.com/keboola/agnes-the-ai-analyst/blob/main/docs/seed-repo-contract.md) |
+
+### `workspace/` — Initial Workspace Template
+
+Shipped to analyst laptops on `agnes init`. The template ships a **vendor-agnostic baseline** — copy this fork into your own private infra repo and customize the placeholder content (CLAUDE.md rules, AGNES_WORKSPACE.md commands) to match your deployment.
+
+| File | Purpose | Customize? |
+|---|---|---|
+| `workspace/CLAUDE.md` | Project instructions Claude Code loads at session start | Yes — replace the placeholder section with your team's metrics workflow, query patterns, on-call playbooks |
+| `workspace/AGNES_WORKSPACE.md` | Human-readable doc — what `agnes init` installed | Optional — the default text is generic |
+| `workspace/.claude/settings.json` | Hooks (`agnes pull`/`agnes push`/`agnes self-upgrade`), permissions, `statusLine`, model | Optional — defaults work for most deployments |
+| `workspace/.claude/commands/` | `/agnes-private` + `/update-agnes-plugins` slash commands | No — these are baseline Agnes commands |
+| `workspace/.claude/CLAUDE.local.md` | Stub for analyst personal notes (preserved across `agnes init --force`) | No — analysts edit this themselves |
+| `workspace/.claude/skills/connector-*/SKILL.md` | Connector-specific skills (Asana, Atlassian, Google Workspace) loaded by Claude when the analyst grants matching credentials | Add new connectors as you wire them up |
+
+Sync workflow: after editing under `workspace/`, an admin clicks **Sync now** at `/admin/server-config` on Agnes. Analysts pick up new content on their next `agnes init --force`.
+
+### `.claude-plugin/` + `plugins/` — Curated Marketplace
+
+| File | Purpose |
+|---|---|
+| `.claude-plugin/marketplace.json` | Manifest — list your curated plugins here (skeleton ships empty) |
+| `plugins/<slug>/` | The actual plugins, each with its own `plugin.json` per the Claude Code plugin format |
+
+Sync workflow: Agnes scheduler clones nightly at 03:00 UTC. Manual re-sync via **Sync now** at `/admin/marketplaces`.
+
+### `install-prompt/` — Install-prompt Template
+
+The Mustache-style template Agnes renders into the one-page **install prompt** an analyst sees after admin onboarding. Variables (`{{server_url}}`, `{{credential_email}}`, …) are filled in server-side per tenant. Customize the wording to match your onboarding tone; the template references the connector skills directly so the analyst's first Claude Code session knows which connectors to enable.
+
 ## Directory structure
 
 ```
 .
-├── terraform/
-│   ├── main.tf                  # Module reference; don't customize (PR upstream module changes instead)
-│   ├── variables.tf             # Input schema
-│   ├── terraform.tfvars.example # Copy to terraform.tfvars (gitignored)
+├── terraform/                   # Infra-as-code
+│   ├── main.tf                  #   Module reference; don't customize (PR upstream module changes instead)
+│   ├── variables.tf             #   Input schema
+│   ├── terraform.tfvars.example #   Copy to terraform.tfvars (gitignored)
 │   └── .gitignore
 ├── .github/workflows/
 │   ├── plan.yml                 # PR trigger: terraform plan, comment on PR
 │   └── apply.yml                # main push: apply-dev → apply-prod (gated)
+├── workspace/                   # Initial Workspace Template — shipped on `agnes init`
+│   ├── CLAUDE.md                #   Project rules (customize for your team)
+│   ├── AGNES_WORKSPACE.md       #   Human-readable workspace docs
+│   └── .claude/
+│       ├── settings.json        #   Hooks + permissions + statusLine
+│       ├── CLAUDE.local.md      #   Stub for analyst personal notes
+│       ├── commands/            #   /agnes-private + /update-agnes-plugins
+│       └── skills/              #   Connector skills (asana, atlassian, gws)
+├── .claude-plugin/
+│   └── marketplace.json         # Curated marketplace manifest (skeleton ships empty)
+├── plugins/                     # Curated Claude Code plugins (skeleton ships empty)
+├── install-prompt/
+│   └── template.md.tmpl         # Install-prompt template rendered per tenant
 ├── config/                      # Customer-specific overrides (instance.yaml, branding)
 └── README.md
 ```

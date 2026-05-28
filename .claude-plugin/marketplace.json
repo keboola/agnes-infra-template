@@ -1,0 +1,9 @@
+{
+  "name": "your-marketplace",
+  "version": "0.1.0",
+  "description": "Curated Claude Code plugins for your Agnes deployment. Replace name/description with your own values; add plugin entries under `plugins/<slug>/` (each with its own `plugin.json` per the Claude Code plugin format).",
+  "owner": {
+    "name": "Your Organization"
+  },
+  "plugins": []
+}
