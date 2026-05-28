@@ -1,0 +1,141 @@
+name: Validate seed content
+
+# Lint the four content sub-trees an Agnes server pulls from this repo:
+#   workspace/, .claude-plugin/, plugins/, install-prompt/
+#
+# Catches operator mistakes BEFORE they reach a live Agnes instance:
+#   - connector skill YAML frontmatter that doesn't parse / is missing
+#     required fields
+#   - .claude-plugin/marketplace.json not valid JSON
+#   - workspace/.claude/settings.json not valid JSON
+#   - workspace/.claude/init-complete shipped (Agnes-reserved — the
+#     server's validate_template_tree rejects it at sync time, which
+#     means the admin only finds out when they click "Sync now")
+#
+# This is intentionally LIGHTWEIGHT (stdlib Python only) — the full
+# contract validator lives in the upstream Agnes server. The point here
+# is to catch the obvious typos in PR review, not to reimplement the
+# server-side guard.
+#
+# Companion to terraform/validate.yml (which only lints Terraform).
+
+on:
+  pull_request:
+    paths:
+      - 'workspace/**'
+      - '.claude-plugin/**'
+      - 'plugins/**'
+      - 'install-prompt/**'
+      - '.github/workflows/validate-content.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'workspace/**'
+      - '.claude-plugin/**'
+      - 'plugins/**'
+      - 'install-prompt/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-content:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyYAML
+        run: pip install --quiet pyyaml
+
+      - name: Reject Agnes-reserved paths
+        run: |
+          # Mirror src/initial_workspace.py::_RESERVED_PATHS in the
+          # upstream Agnes repo. Agnes refuses to extract these at sync
+          # time; surface the rejection in PR review instead of in the
+          # admin's "Sync now" modal hours later.
+          for reserved in ".claude/init-complete"; do
+            if [ -e "workspace/$reserved" ]; then
+              echo "::error file=workspace/$reserved::Agnes-reserved path; upstream sync will refuse this repo. Remove the file."
+              exit 1
+            fi
+          done
+
+      - name: Validate JSON files
+        run: |
+          set -e
+          for f in .claude-plugin/marketplace.json workspace/.claude/settings.json; do
+            if [ -f "$f" ]; then
+              python -c "import json, sys; json.load(open(sys.argv[1]))" "$f" \
+                || { echo "::error file=$f::invalid JSON"; exit 1; }
+              echo "ok: $f"
+            fi
+          done
+
+      - name: Validate connector skill frontmatter
+        run: |
+          python - <<'PY'
+          import sys
+          import pathlib
+          import yaml
+
+          REQUIRED_TOP = {"name", "description", "connector"}
+          REQUIRED_CONNECTOR = {"display_name", "short_summary", "estimated_minutes"}
+
+          skills_dir = pathlib.Path("workspace/.claude/skills")
+          if not skills_dir.is_dir():
+              print("no workspace/.claude/skills/ — nothing to validate")
+              sys.exit(0)
+
+          errors = []
+          for skill_md in skills_dir.glob("connector-*/SKILL.md"):
+              text = skill_md.read_text(encoding="utf-8")
+              if not text.startswith("---\n"):
+                  errors.append(f"{skill_md}: missing YAML frontmatter (file must start with `---`)")
+                  continue
+              try:
+                  _, fm_block, _body = text.split("---\n", 2)
+              except ValueError:
+                  errors.append(f"{skill_md}: malformed frontmatter (no closing `---`)")
+                  continue
+              try:
+                  fm = yaml.safe_load(fm_block) or {}
+              except yaml.YAMLError as exc:
+                  errors.append(f"{skill_md}: frontmatter YAML parse error: {exc}")
+                  continue
+              if not isinstance(fm, dict):
+                  errors.append(f"{skill_md}: frontmatter is not a mapping")
+                  continue
+              missing_top = REQUIRED_TOP - set(fm)
+              if missing_top:
+                  errors.append(f"{skill_md}: missing required top-level keys: {sorted(missing_top)}")
+              connector = fm.get("connector")
+              if not isinstance(connector, dict):
+                  errors.append(f"{skill_md}: `connector:` block missing or not a mapping")
+              else:
+                  missing_c = REQUIRED_CONNECTOR - set(connector)
+                  if missing_c:
+                      errors.append(f"{skill_md}: connector block missing required keys: {sorted(missing_c)}")
+                  est = connector.get("estimated_minutes")
+                  if est is not None and (not isinstance(est, int) or est <= 0):
+                      errors.append(f"{skill_md}: `estimated_minutes` must be a positive integer")
+              # Slug-name match: the directory name `connector-<slug>`
+              # must equal the `name:` field — Agnes uses the dir name
+              # as the slug key, callers MUST be able to predict it
+              # from the manifest entry.
+              expected = skill_md.parent.name
+              if fm.get("name") != expected:
+                  errors.append(
+                      f"{skill_md}: `name: {fm.get('name')}` doesn't match directory `{expected}` — "
+                      "the manifest scan uses the directory name as the slug; they must agree."
+                  )
+              print(f"ok: {skill_md}")
+
+          if errors:
+              for e in errors:
+                  print(f"::error::{e}")
+              sys.exit(1)
+          PY
