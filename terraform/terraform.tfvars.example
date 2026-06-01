@@ -33,6 +33,8 @@ prod_instance = {
   upgrade_mode = "auto"                   # auto (cron every 5 min) | pinned (manual)
   tls_mode     = "none"                   # none | caddy (requires domain)
   domain       = ""                       # required when tls_mode = "caddy"
+  # app_mem_limit       = "4g"            # container cap; raise on a bigger VM (e.g. "10g" on 16 GiB), lower under host RAM on a tiny one
+  # scheduler_mem_limit = "2g"
 }
 
 dev_instances = [
