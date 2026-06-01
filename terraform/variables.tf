@@ -53,7 +53,7 @@ variable "prod_instance" {
     # Container memory caps (AGNES_APP_MEM_LIMIT / AGNES_SCHEDULER_MEM_LIMIT in
     # /opt/agnes/.env). Defaults match the compose defaults. Raise on a larger
     # VM together with the app's per-connection DuckDB budgets, or lower on a
-    # tiny VM so the caps fit under host RAM. Requires module >= infra-v1.10.0.
+    # tiny VM so the caps fit under host RAM. Requires module >= infra-v1.11.0.
     app_mem_limit       = optional(string, "4g")
     scheduler_mem_limit = optional(string, "2g")
   })
@@ -69,7 +69,7 @@ variable "dev_instances" {
     name         = string
     machine_type = optional(string, "e2-small")
     image_tag    = optional(string, "dev")
-    # See prod_instance; same defaults. Requires module >= infra-v1.10.0.
+    # See prod_instance; same defaults. Requires module >= infra-v1.11.0.
     app_mem_limit       = optional(string, "4g")
     scheduler_mem_limit = optional(string, "2g")
   }))
