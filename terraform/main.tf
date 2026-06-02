@@ -21,7 +21,7 @@ provider "google" {
 }
 
 module "agnes" {
-  source = "github.com/keboola/agnes-the-ai-analyst//infra/modules/customer-instance?ref=infra-v1.5.0"
+  source = "github.com/keboola/agnes-the-ai-analyst//infra/modules/customer-instance?ref=infra-v1.11.0"
 
   gcp_project_id    = var.gcp_project_id
   region            = var.region
