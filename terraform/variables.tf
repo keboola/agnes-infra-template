@@ -75,3 +75,10 @@ variable "dev_instances" {
   }))
   default = []
 }
+
+variable "alert_webhook_url" {
+  description = "Webhook for the host-side watchdog + DB-backup-verify alerts (Slack / Google Chat compatible {\"text\": ...} POST). Empty (default) = log-only on the VM. Requires module >= infra-v1.14.0. Keep the URL out of the repo — supply via terraform.tfvars or a CI secret."
+  type        = string
+  default     = ""
+  sensitive   = true
+}

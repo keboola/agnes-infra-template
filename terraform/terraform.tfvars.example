@@ -45,3 +45,7 @@ dev_instances = [
   # Add more dev VMs as needed (one per branch or team member):
   # { name = "agnes-alice-test", image_tag = "dev-feature-alice-xyz" },
 ]
+
+# Optional: webhook for host-side watchdog + backup-verify alerts
+# (Slack or Google Chat incoming webhook). Empty = log-only on the VM.
+# alert_webhook_url = "https://chat.googleapis.com/v1/spaces/<space>/messages?key=...&token=..."

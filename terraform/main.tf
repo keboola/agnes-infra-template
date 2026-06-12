@@ -21,7 +21,7 @@ provider "google" {
 }
 
 module "agnes" {
-  source = "github.com/keboola/agnes-the-ai-analyst//infra/modules/customer-instance?ref=infra-v1.11.0"
+  source = "github.com/keboola/agnes-the-ai-analyst//infra/modules/customer-instance?ref=infra-v1.14.0"
 
   gcp_project_id    = var.gcp_project_id
   region            = var.region
@@ -32,6 +32,11 @@ module "agnes" {
   keboola_stack_url = var.keboola_stack_url
   prod_instance     = var.prod_instance
   dev_instances     = var.dev_instances
+
+  # Watchdog + DB-backup alerting (module >= infra-v1.14.0). Empty = the
+  # watchdog still runs, alerts stay in journald + /var/log/agnes-watchdog.log
+  # on the VM. Set to a Slack / Google Chat incoming-webhook URL to get paged.
+  alert_webhook_url = var.alert_webhook_url
 }
 
 output "prod_ip" {
