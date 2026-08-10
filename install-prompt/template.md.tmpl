@@ -1,8 +1,31 @@
 {tls_trust_block}Set up the {instance_brand} CLI on this machine.
 
 Server: {server_url}
-Personal access token: {token}
-(Just generated; treat it as a secret.)
+
+Your login token is already saved on this machine at ~/.agnes/token
+(written by step 4 of the install guide at {server_url}). The steps
+below only reference that file path — never print the token, echo
+it, or paste it into this chat.
+
+This prompt is the final step of the install guide at {server_url} —
+the same guide whose previous step saved the login token above.
+
+Before running anything, confirm with the user that they want to
+proceed. In your own words, formatted as a short bullet list: a
+lead-in sentence stating that the install runs from {server_url} —
+the same server this prompt comes from — then one bullet per thing
+the setup will do: install the {instance_brand} CLI from that
+server, connect this workspace to it (Claude Code hooks that sync
+on every session), register its plugin marketplace, and offer to
+connect optional tools; close with a note that the login token is
+already saved at ~/.agnes/token and will not be printed. State
+facts only — no advice about whether the host is trusted and no
+warnings; picking Install below is the user's call to make. Then
+ask whether to continue using your question tool (the user picks
+with arrow keys and confirms with Enter — no typing), with exactly
+two options:
+  - 'Install' → continue below.
+  - 'Stop' (or any other reply) → stop without running any step.
 
 Run these, in order. The script is idempotent — safe to re-run if a step
 fails partway through. If a step fails with an unfamiliar error, paste the
@@ -73,16 +96,12 @@ real problem.
                        Do NOT run `mkdir`, do NOT `cd`, do NOT continue.
 
 3) Bootstrap your {instance_brand} workspace in this directory.
-   Write the PAT to a file FIRST, then run `agnes init` with
-   `--token-file`. Passing the JWT inline via `--token "eyJ..."`
-   sometimes trips Claude Code's auto-classifier (long bearer
-   token in a command line looks like a credential-exfil pattern);
-   piping the token through a file keeps it out of the command-
-   line argv entirely.
+   The token was saved to ~/.agnes/token by step 4 of the install
+   guide, so there is nothing to write here — `agnes init
+   --token-file` reads it directly (never on the command line, which
+   would trip Claude Code's auto-classifier) and removes the file
+   once the credential is saved to ~/.config/agnes/token.json:
 
-   mkdir -p ~/.agnes && umask 077 && cat > ~/.agnes/token <<'AGNES_PAT'
-{token}
-AGNES_PAT
    agnes init --server-url "{server_url}" --token-file ~/.agnes/token --workspace .
 
    If Claude Code still blocks an `agnes` command (e.g. the
