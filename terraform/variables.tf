@@ -56,6 +56,39 @@ variable "prod_instance" {
     # tiny VM so the caps fit under host RAM. Requires module >= infra-v1.11.0.
     app_mem_limit       = optional(string, "4g")
     scheduler_mem_limit = optional(string, "2g")
+    # Per-VM branding. The module (customer-instance) carries these fields; the
+    # template's object type must list them too, otherwise terraform SILENTLY
+    # DROPS them from tfvars before they reach the module and the instance
+    # renders unbranded. All optional with empty/null defaults => no branding,
+    # byte-identical to before. Requires a module ref that includes branding.
+    theme       = optional(string, "")
+    logo_svg    = optional(string, "")
+    brand       = optional(string, "")
+    brand_short = optional(string, "")
+    subtitle    = optional(string, "")
+    copyright   = optional(string, "")
+    theme_colors = optional(object({
+      primary        = optional(string)
+      primary_dark   = optional(string)
+      primary_light  = optional(string)
+      background     = optional(string)
+      surface        = optional(string)
+      border         = optional(string)
+      text_primary   = optional(string)
+      text_secondary = optional(string)
+      success        = optional(string)
+      warning        = optional(string)
+      error          = optional(string)
+      font_primary   = optional(string)
+      font_url       = optional(string)
+      radius         = optional(string)
+    }), {})
+    custom_scripts = optional(list(object({
+      name      = string
+      enabled   = bool
+      placement = string
+      html      = string
+    })), [])
   })
   default = {
     name      = "agnes-prod"
@@ -72,6 +105,35 @@ variable "dev_instances" {
     # See prod_instance; same defaults. Requires module >= infra-v1.11.0.
     app_mem_limit       = optional(string, "4g")
     scheduler_mem_limit = optional(string, "2g")
+    # Per-VM branding — mirror of prod_instance (see the note there).
+    theme       = optional(string, "")
+    logo_svg    = optional(string, "")
+    brand       = optional(string, "")
+    brand_short = optional(string, "")
+    subtitle    = optional(string, "")
+    copyright   = optional(string, "")
+    theme_colors = optional(object({
+      primary        = optional(string)
+      primary_dark   = optional(string)
+      primary_light  = optional(string)
+      background     = optional(string)
+      surface        = optional(string)
+      border         = optional(string)
+      text_primary   = optional(string)
+      text_secondary = optional(string)
+      success        = optional(string)
+      warning        = optional(string)
+      error          = optional(string)
+      font_primary   = optional(string)
+      font_url       = optional(string)
+      radius         = optional(string)
+    }), {})
+    custom_scripts = optional(list(object({
+      name      = string
+      enabled   = bool
+      placement = string
+      html      = string
+    })), [])
   }))
   default = []
 }
