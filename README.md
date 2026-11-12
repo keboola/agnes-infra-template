@@ -201,7 +201,7 @@ Sync workflow: Agnes scheduler clones nightly at 03:00 UTC. Manual re-sync via *
 
 ### `install-prompt/` — Install-prompt Template
 
-The Mustache-style template Agnes renders into the one-page **install prompt** an analyst sees after admin onboarding. Variables (`{{server_url}}`, `{{credential_email}}`, …) are filled in server-side per tenant. Customize the wording to match your onboarding tone; the template references the connector skills directly so the analyst's first Claude Code session knows which connectors to enable.
+The Mustache-style template Agnes renders into the one-page **install prompt** an analyst sees after admin onboarding. Variables (`{{ instance.name }}`, `{{ server.url }}`, `{{ server.hostname }}`, `{{ user.* }}`, `{{ today }}`) come from Agnes's Jinja render context and are filled in server-side per tenant; see `docs/seed-repo-contract.md` in the Agnes repo for the full list. Customize the wording to match your onboarding tone; the template references the connector skills directly so the analyst's first Claude Code session knows which connectors to enable.
 
 ## Directory structure
 
