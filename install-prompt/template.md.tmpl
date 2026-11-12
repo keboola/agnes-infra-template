@@ -23,7 +23,17 @@ verification.
    (cd "$TMPDIR_WHEEL" && curl -fsSL --max-redirs 0 -OJ {{ server.url }}/cli/download)
    WHEEL=$(ls "$TMPDIR_WHEEL"/*.whl 2>/dev/null | head -n1)
    [ -n "$WHEEL" ] || { echo "error: wheel download failed (no .whl in $TMPDIR_WHEEL)" >&2; exit 1; }
+   case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*)
+     export UV_TOOL_DIR="$USERPROFILE\.agnes\uv\tools"
+     export UV_TOOL_BIN_DIR="$USERPROFILE\.local\bin"
+     export UV_PYTHON_INSTALL_DIR="$USERPROFILE\.agnes\uv\python" ;;
+   esac
    uv tool install --force "$WHEEL"
+
+   On Windows the `case` lines keep uv's tools and Python in ~/.agnes instead of
+   AppData. A Windows app package (the Claude desktop app is one) redirects every
+   AppData write made from inside it into its own private folder, which would
+   leave `agnes` working only inside that app. Keep them when you run the commands.
 
    If uv is not installed yet, install it from the official instructions at
    https://docs.astral.sh/uv/ — on Windows `winget install --id=astral-sh.uv`,
